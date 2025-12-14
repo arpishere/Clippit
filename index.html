@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Clippy AI — Animated Multi-Personality GUI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --panel: #ffffff;
+      --accent: #2b7cff;
+      --muted: #666;
+    }
+    html,body { height:100%; margin:0; font-family: Inter, Arial, sans-serif; background: var(--bg); }
+    .app {
+      max-width: 900px;
+      margin: 28px auto;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+      padding: 18px;
+    }
+    .left {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 6px 18px rgba(20,30,60,0.06);
+      position: relative;
+      min-height: 420px;
+    }
+    .left h2 { margin:8px 0 6px; font-size:20px; }
+    .left p { color: var(--muted); font-size:13px; margin:0 0 12px; }
+    .controls, .personality-select, .api-select { display:flex; gap:8px; align-items:center; margin-top:10px; }
+    .small-btn {
+      border: none;
+      background: var(--accent);
+      color: white;
+      padding:8px 10px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .small-btn.secondary { background:#eee; color:#333; }
+    select { flex:1; padding:6px 8px; border-radius:8px; border:1px solid #ccc; }
+
+    .right {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 0;
+      box-shadow: 0 6px 18px rgba(20,30,60,0.06);
+      min-height: 420px;
+      display:flex;
+      flex-direction:column;
+    }
+    .chat-header {
+      padding:14px;
+      border-bottom: 1px solid #f0f0f0;
+      display:flex; gap:12px; align-items:center;
+    }
+    .chat-header h3 { margin:0; }
+    .chat-area {
+      padding: 14px;
+      overflow:auto;
+      flex:1;
+      background: linear-gradient(180deg, rgba(250,250,252,0.5), transparent);
+    }
+    .msg { max-width: 78%; margin:10px 0; padding:10px 12px; border-radius:12px; line-height:1.4; }
+    .msg.user { margin-left:auto; background:#e9f1ff; color:#04224a; border-bottom-right-radius:4px; }
+    .msg.clippy { background:#fff; color:#111; border:1px solid #f0f0f0; border-bottom-left-radius:4px; }
+    .input-row { display:flex; gap:8px; padding:12px; border-top:1px solid #f0f0f0; }
+    .input-row input { flex:1; padding:10px 12px; border-radius:10px; border:1px solid #e6e9ef; outline:none; font-size:14px; }
+    .input-row button { padding:10px 14px; border-radius:10px; border:none; background:var(--accent); color:white; cursor:pointer; font-weight:600; }
+
+    #clippy {
+      width: 140px;
+      position: absolute;
+      right: 14px;
+      top: 60px;
+      cursor: grab;
+      user-select:none;
+      transition: transform 160ms ease;
+    }
+    #clippy.dragging { cursor:grabbing; transform: scale(1.02) rotate(-6deg); }
+
+    .thinking {
+      display:inline-block;
+      width:44px;
+      height:18px;
+      position:relative;
+    }
+    .dot {
+      width:8px; height:8px; border-radius:50%; background:#888; display:inline-block; position:absolute; top:5px; animation: blink 1s infinite;
+    }
+    .dot:nth-child(1){ left:0; animation-delay:0s }
+    .dot:nth-child(2){ left:12px; animation-delay:0.12s }
+    .dot:nth-child(3){ left:24px; animation-delay:0.24s }
+    @keyframes blink { 0%{opacity:0.2} 50%{opacity:1} 100%{opacity:0.2} }
+
+    @media (max-width:900px) {
+      .app { grid-template-columns: 1fr; padding:12px; }
+      #clippy { right: auto; left: 50%; transform: translateX(-50%); top: 10px; }
+    }
+
+    /* Clippy animations */
+    .wiggle { animation: wiggle 0.4s ease; }
+    .tilt { animation: tilt 0.4s ease; }
+    .jump { animation: jump 0.4s ease; }
+
+    @keyframes wiggle { 0% { transform: rotate(0deg); } 25% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } 75% { transform: rotate(-10deg); } 100% { transform: rotate(0deg); } }
+    @keyframes tilt { 0% { transform: rotate(0deg); } 50% { transform: rotate(15deg); } 100% { transform: rotate(0deg); } }
+    @keyframes jump { 0% { transform: translateY(0); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0); } }
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="left">
+      <h2>Clippy AI</h2>
+      <p>Ask Clippy anything. Runs in your browser with OpenAI API.</p>
+
+      <div class="controls">
+        <button id="wiggleBtn" class="small-btn">Wiggle</button>
+        <button id="clearBtn" class="small-btn secondary">Clear Chat</button>
+      </div>
+
+      <div class="personality-select">
+        <select id="personality">
+          <option value="clippy">Clippy (Friendly)</option>
+          <option value="professor">Professor (Smart)</option>
+          <option value="joker">Joker (Goofy)</option>
+        </select>
+      </div>
+
+      <div class="api-select">
+        <select id="apiKeySelect">
+          <option value="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">API Key 1</option>
+          <option value="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">API Key 2</option>
+        </select>
+      </div>
+
+      <p class="note">Drag Clippy around the left panel.</p>
+      <img id="clippy" src="https://www.rickstreeper.com/clippy/Clippy.png" alt="Clippy">
+    </div>
+
+    <div class="right">
+      <div class="chat-header">
+        <img src="https://www.rickstreeper.com/clippy/Clippy.png" style="width:46px;height:46px;border-radius:8px;" alt="">
+        <div>
+          <h3>Clippy</h3>
+          <div id="status" style="font-size:13px;color:#666;">Ready</div>
+        </div>
+      </div>
+
+      <div id="chat" class="chat-area"></div>
+
+      <div class="input-row">
+        <input id="input" placeholder="Type a question for Clippy..." autocomplete="off" />
+        <button id="send">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+    const status = document.getElementById('status');
+    const clippy = document.getElementById('clippy');
+    const wiggleBtn = document.getElementById('wiggleBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const personalitySelect = document.getElementById('personality');
+    const apiKeySelect = document.getElementById('apiKeySelect');
+
+    // Map personality to images
+    const personalityImages = {
+      clippy: "https://www.rickstreeper.com/clippy/Clippy.png",
+      professor: "https://www.rickstreeper.com/clippy/Clippy-Professor.png",
+      joker: "https://www.rickstreeper.com/clippy/Clippy-Joker.png"
+    };
+
+    // Update Clippy image when personality changes
+    function updateClippyImage(personality){
+      clippy.src = personalityImages[personality] || personalityImages.clippy;
+    }
+    personalitySelect.addEventListener('change', ()=>updateClippyImage(personalitySelect.value));
+    updateClippyImage(personalitySelect.value);
+
+    const history = [
+      { role: "system", content: "You are Microsoft Clippy. Be helpful, friendly, and a little goofy." }
+    ];
+
+    function appendMessage(role, text){
+      const el = document.createElement('div');
+      el.className = 'msg ' + (role==='user'?'user':'clippy');
+      el.textContent = (role==='user'?'You: ':'Clippy: ') + text;
+      chat.appendChild(el);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function send(){
+      const text = input.value.trim();
+      if(!text) return;
+      appendMessage('user', text);
+      history.push({role:'user', content:text});
+      input.value='';
+      setStatus('Thinking...');
+      showThinking(true);
+      animateClippyOnMessage(text);
+
+      try{
+        const reply = await fetchCompletion(history, personalitySelect.value);
+        history.push({role:'assistant', content:reply});
+        appendMessage('assistant', reply);
+        animateClippyOnReply(reply);
+      } catch(err){
+        console.error(err);
+        appendMessage('assistant','Error: unable to reach API.');
+      } finally{
+        setStatus('Ready');
+        showThinking(false);
+      }
+    }
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', (e)=>{if(e.key==='Enter') send();});
+    wiggleBtn.onclick = ()=>{addTempClass(clippy,'wiggle');};
+    clearBtn.onclick = ()=>{chat.innerHTML=''; history.splice(1); appendMessage('assistant','Hi! I am Clippy — ask me anything.');};
+
+    appendMessage('assistant','Hi! I am Clippy — ask me anything.');
+
+    function setStatus(text){status.textContent=text;}
+    let thinkingIndicator;
+    function showThinking(on){
+      if(on){
+        if(!thinkingIndicator){
+          thinkingIndicator = document.createElement('div');
+          thinkingIndicator.className='thinking';
+          thinkingIndicator.innerHTML='<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+          status.parentElement.appendChild(thinkingIndicator);
+        }
+      } else if(thinkingIndicator){ thinkingIndicator.remove(); thinkingIndicator=null; }
+    }
+
+    // Dragging logic
+    (function makeDraggable(node){
+      let dragging=false, startX=0,startY=0,origX=0,origY=0;
+      node.addEventListener('mousedown', e=>{
+        dragging=true; node.classList.add('dragging');
+        startX=e.clientX; startY=e.clientY;
+        const rect=node.getBoundingClientRect();
+        origX=rect.left; origY=rect.top;
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+      function onMove(e){if(!dragging) return; const dx=e.clientX-startX; const dy=e.clientY-startY; node.style.left=(origX+dx)+'px'; node.style.top=(origY+dy)+'px';}
+      function onUp(){dragging=false; node.classList.remove('dragging'); document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp);}
+    })(clippy);
+
+    // OpenAI call
+    async function fetchCompletion(messages, personality){
+      const selectedKey = apiKeySelect.value;
+      messages[0].content = `You are Microsoft Clippy. Your personality is: ${personality}. Be helpful, fun, and concise.`;
+
+      const payload = {
+        model:"gpt-4o-mini",
+        messages:messages.map(m=>({role:m.role, content:m.content})),
+        max_tokens:300,
+        temperature:0.8
+      };
+
+      const res = await fetch("https://api.openai.com/v1/chat/completions",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":"Bearer "+selectedKey
+        },
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok){ const t=await res.text(); throw new Error('API error: '+res.status+' — '+t); }
+      const data = await res.json();
+      return data?.choices?.[0]?.message?.content?.trim() ?? "No response.";
+    }
+
+    // Animations
+    function animateClippyOnMessage(text){
+      if(text.length<20) addTempClass(clippy,'tilt');
+      else if(text.length>80) addTempClass(clippy,'jump');
+      else addTempClass(clippy,'wiggle');
+    }
+    function animateClippyOnReply(text){
+      if(text.includes('!')) addTempClass(clippy,'jump');
+      else if(text.toLowerCase().includes('error')) addTempClass(clippy,'tilt');
+      else addTempClass(clippy,'wiggle');
+    }
+    function addTempClass(el,cls){
+      el.classList.add(cls);
+      setTimeout(()=>el.classList.remove(cls),400);
+    }
+  </script>
+</body>
+</html>
