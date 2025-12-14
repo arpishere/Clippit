@@ -12,93 +12,169 @@
   --accent:#2b7cff;
   --muted:#666;
 }
-html,body{height:100%;margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);}
-.app{
-  max-width:900px;margin:28px auto;
-  display:grid;grid-template-columns:320px 1fr;
-  gap:18px;padding:18px;
+
+html,body {
+  height:100%;
+  margin:0;
+  font-family:Inter,Arial,sans-serif;
+  background:var(--bg);
 }
-.left,.right{
+
+.app {
+  max-width:900px;
+  margin:28px auto;
+  display:grid;
+  grid-template-columns:320px 1fr;
+  gap:18px;
+  padding:18px;
+}
+
+.left,.right {
   background:var(--panel);
   border-radius:12px;
   box-shadow:0 6px 18px rgba(20,30,60,0.06);
 }
-.left{padding:14px;position:relative;min-height:420px;}
-.right{display:flex;flex-direction:column;min-height:420px;}
 
-h2{margin:8px 0;}
-p{color:var(--muted);font-size:13px;}
+.left {
+  padding:14px;
+  position:relative;
+  min-height:420px;
+}
 
-.controls,.personality-select,.api-select{
-  display:flex;gap:8px;margin-top:10px;
+.right {
+  display:flex;
+  flex-direction:column;
+  min-height:420px;
 }
-button{
-  border:none;background:var(--accent);color:white;
-  padding:8px 12px;border-radius:8px;
-  font-weight:600;cursor:pointer;
+
+.controls,.personality-select,.api-select {
+  display:flex;
+  gap:8px;
+  margin-top:10px;
 }
-button.secondary{background:#eee;color:#333;}
-select,input{
-  flex:1;padding:8px;border-radius:8px;
+
+button {
+  border:none;
+  background:var(--accent);
+  color:white;
+  padding:8px 12px;
+  border-radius:8px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+button.secondary {
+  background:#eee;
+  color:#333;
+}
+
+select,input {
+  flex:1;
+  padding:8px;
+  border-radius:8px;
   border:1px solid #ccc;
+  font-size:14px;
 }
 
-.chat-header{
-  padding:14px;border-bottom:1px solid #eee;
-  display:flex;gap:12px;align-items:center;
+.chat-header {
+  padding:14px;
+  border-bottom:1px solid #eee;
+  display:flex;
+  gap:12px;
+  align-items:center;
 }
-.chat-area{
-  flex:1;padding:14px;overflow:auto;
+
+.chat-area {
+  flex:1;
+  padding:14px;
+  overflow:auto;
 }
-.msg{
-  max-width:78%;margin:10px 0;
-  padding:10px 12px;border-radius:12px;
+
+.msg {
+  max-width:78%;
+  margin:10px 0;
+  padding:10px 12px;
+  border-radius:12px;
+  line-height:1.4;
 }
-.user{
+
+.msg.user {
   margin-left:auto;
   background:#e9f1ff;
 }
-.clippy{
-  background:#fff;border:1px solid #eee;
+
+.msg.clippy {
+  background:#fff;
+  border:1px solid #eee;
 }
 
-.input-row{
-  display:flex;gap:8px;
-  padding:12px;border-top:1px solid #eee;
+.input-row {
+  display:flex;
+  gap:8px;
+  padding:12px;
+  border-top:1px solid #eee;
 }
 
-#clippy{
+#clippy {
   width:140px;
   position:absolute;
-  right:14px;top:60px;
+  right:14px;
+  top:60px;
   cursor:grab;
+  user-select:none;
+  pointer-events:none; /* 🔑 Vercel focus fix */
 }
-#clippy.dragging{cursor:grabbing;}
 
-.thinking{
-  display:inline-flex;gap:4px;margin-left:6px;
+#clippy.dragging {
+  cursor:grabbing;
 }
-.dot{
-  width:6px;height:6px;border-radius:50%;
-  background:#888;animation:blink 1s infinite;
+
+.thinking {
+  display:inline-flex;
+  gap:4px;
+  margin-left:6px;
 }
+
+.dot {
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:#888;
+  animation:blink 1s infinite;
+}
+
 .dot:nth-child(2){animation-delay:.15s}
 .dot:nth-child(3){animation-delay:.3s}
-@keyframes blink{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
 
-.wiggle{animation:wiggle .4s}
-.tilt{animation:tilt .4s}
-.jump{animation:jump .4s}
-@keyframes wiggle{25%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
-@keyframes tilt{50%{transform:rotate(15deg)}}
-@keyframes jump{50%{transform:translateY(-14px)}}
+@keyframes blink {
+  0%{opacity:.3}
+  50%{opacity:1}
+  100%{opacity:.3}
+}
+
+.wiggle { animation:wiggle .4s }
+.tilt { animation:tilt .4s }
+.jump { animation:jump .4s }
+
+@keyframes wiggle {
+  25%{transform:rotate(-8deg)}
+  50%{transform:rotate(8deg)}
+}
+
+@keyframes tilt {
+  50%{transform:rotate(15deg)}
+}
+
+@keyframes jump {
+  50%{transform:translateY(-14px)}
+}
 </style>
 </head>
 
 <body>
 <div class="app">
 
-<!-- LEFT PANEL -->
+<!-- LEFT -->
 <div class="left">
   <h2>Clippy AI</h2>
   <p>Powered by Google Gemini</p>
@@ -118,15 +194,14 @@ select,input{
 
   <div class="api-select">
     <select id="apiKeySelect">
-      <option value="AIzaSyDVUT7oxOSStQdxhaDGsXVx6uVj2ndwMbg">Gemini API Key</option>
+      <option value="YOUR_GEMINI_API_KEY">Gemini API Key</option>
     </select>
   </div>
 
-  <img id="clippy"
-       src="https://www.rickstreeper.com/clippy/Clippy.png">
+  <img id="clippy" src="https://www.rickstreeper.com/clippy/Clippy.png">
 </div>
 
-<!-- RIGHT PANEL -->
+<!-- RIGHT -->
 <div class="right">
   <div class="chat-header">
     <img src="https://www.rickstreeper.com/clippy/Clippy.png" width="46">
@@ -139,7 +214,12 @@ select,input{
   <div id="chat" class="chat-area"></div>
 
   <div class="input-row">
-    <input id="input" placeholder="Ask Clippy..." />
+    <input
+      id="input"
+      type="text"
+      placeholder="Ask Clippy..."
+      autocomplete="off"
+    />
     <button id="send">Send</button>
   </div>
 </div>
@@ -147,27 +227,27 @@ select,input{
 </div>
 
 <script>
-const chat=document.getElementById("chat");
-const input=document.getElementById("input");
-const sendBtn=document.getElementById("send");
-const statusEl=document.getElementById("status");
-const clippy=document.getElementById("clippy");
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("send");
+const statusEl = document.getElementById("status");
+const clippy = document.getElementById("clippy");
+const wiggleBtn = document.getElementById("wiggleBtn");
+const clearBtn = document.getElementById("clearBtn");
 
-const personalityImages={
+const personalityImages = {
   clippy:"https://www.rickstreeper.com/clippy/Clippy.png",
   professor:"https://www.rickstreeper.com/clippy/Clippy-Professor.png",
   joker:"https://www.rickstreeper.com/clippy/Clippy-Joker.png"
 };
 
-document.getElementById("personality").onchange=e=>{
-  clippy.src=personalityImages[e.target.value];
+document.getElementById("personality").onchange = e => {
+  clippy.src = personalityImages[e.target.value];
 };
-
-const history=[];
 
 function addMsg(role,text){
   const d=document.createElement("div");
-  d.className=`msg ${role}`;
+  d.className="msg "+role;
   d.textContent=(role==="user"?"You: ":"Clippy: ")+text;
   chat.appendChild(d);
   chat.scrollTop=chat.scrollHeight;
@@ -180,7 +260,6 @@ async function send(){
   if(!text)return;
   input.value="";
   addMsg("user",text);
-  history.push(text);
   setStatus("Thinking…");
   animate("wiggle");
 
@@ -195,7 +274,15 @@ async function send(){
 }
 
 sendBtn.onclick=send;
-input.onkeydown=e=>e.key==="Enter"&&send();
+input.addEventListener("keydown",e=>{
+  if(e.key==="Enter") send();
+});
+
+wiggleBtn.onclick=()=>animate("wiggle");
+clearBtn.onclick=()=>{
+  chat.innerHTML="";
+  addMsg("clippy","Hi! I’m Clippy — powered by Gemini 🤖");
+};
 
 async function gemini(prompt){
   const key=document.getElementById("apiKeySelect").value;
@@ -209,19 +296,22 @@ Be helpful, fun, concise.`;
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
     {
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:{ "Content-Type":"application/json" },
       body:JSON.stringify({
         contents:[{
           role:"user",
-          parts:[{text:system+"\n\n"+history.join("\n")+"\nUser: "+prompt}]
+          parts:[{ text: system + "\nUser: " + prompt }]
         }],
-        generationConfig:{temperature:.8,maxOutputTokens:300}
+        generationConfig:{
+          temperature:0.8,
+          maxOutputTokens:300
+        }
       })
     }
   );
 
   const data=await res.json();
-  return data.candidates[0].content.parts[0].text;
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response.";
 }
 
 function animate(cls){
@@ -229,8 +319,14 @@ function animate(cls){
   setTimeout(()=>clippy.classList.remove(cls),400);
 }
 
-addMsg("clippy","Hi! I’m Clippy — powered by Gemini 🤖");
+/* 🔑 VERCEL INPUT FOCUS FIX */
+function forceFocus(){ input.focus(); }
+document.addEventListener("click", forceFocus);
+document.addEventListener("keydown", forceFocus);
+document.addEventListener("touchstart", forceFocus);
+setTimeout(forceFocus, 500);
 
+addMsg("clippy","Hi! I’m Clippy — powered by Gemini 🤖");
 </script>
 </body>
 </html>
