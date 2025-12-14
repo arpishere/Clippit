@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Clippy AI — Gemini Edition</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+
+<style>
+:root {
+  --bg:#f3f6fb;
+  --panel:#ffffff;
+  --accent:#2b7cff;
+  --muted:#666;
+}
+html,body{height:100%;margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);}
+.app{
+  max-width:900px;margin:28px auto;
+  display:grid;grid-template-columns:320px 1fr;
+  gap:18px;padding:18px;
+}
+.left,.right{
+  background:var(--panel);
+  border-radius:12px;
+  box-shadow:0 6px 18px rgba(20,30,60,0.06);
+}
+.left{padding:14px;position:relative;min-height:420px;}
+.right{display:flex;flex-direction:column;min-height:420px;}
+
+h2{margin:8px 0;}
+p{color:var(--muted);font-size:13px;}
+
+.controls,.personality-select,.api-select{
+  display:flex;gap:8px;margin-top:10px;
+}
+button{
+  border:none;background:var(--accent);color:white;
+  padding:8px 12px;border-radius:8px;
+  font-weight:600;cursor:pointer;
+}
+button.secondary{background:#eee;color:#333;}
+select,input{
+  flex:1;padding:8px;border-radius:8px;
+  border:1px solid #ccc;
+}
+
+.chat-header{
+  padding:14px;border-bottom:1px solid #eee;
+  display:flex;gap:12px;align-items:center;
+}
+.chat-area{
+  flex:1;padding:14px;overflow:auto;
+}
+.msg{
+  max-width:78%;margin:10px 0;
+  padding:10px 12px;border-radius:12px;
+}
+.user{
+  margin-left:auto;
+  background:#e9f1ff;
+}
+.clippy{
+  background:#fff;border:1px solid #eee;
+}
+
+.input-row{
+  display:flex;gap:8px;
+  padding:12px;border-top:1px solid #eee;
+}
+
+#clippy{
+  width:140px;
+  position:absolute;
+  right:14px;top:60px;
+  cursor:grab;
+}
+#clippy.dragging{cursor:grabbing;}
+
+.thinking{
+  display:inline-flex;gap:4px;margin-left:6px;
+}
+.dot{
+  width:6px;height:6px;border-radius:50%;
+  background:#888;animation:blink 1s infinite;
+}
+.dot:nth-child(2){animation-delay:.15s}
+.dot:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
+
+.wiggle{animation:wiggle .4s}
+.tilt{animation:tilt .4s}
+.jump{animation:jump .4s}
+@keyframes wiggle{25%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+@keyframes tilt{50%{transform:rotate(15deg)}}
+@keyframes jump{50%{transform:translateY(-14px)}}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<!-- LEFT PANEL -->
+<div class="left">
+  <h2>Clippy AI</h2>
+  <p>Powered by Google Gemini</p>
+
+  <div class="controls">
+    <button id="wiggleBtn">Wiggle</button>
+    <button id="clearBtn" class="secondary">Clear</button>
+  </div>
+
+  <div class="personality-select">
+    <select id="personality">
+      <option value="clippy">Clippy (Friendly)</option>
+      <option value="professor">Professor (Smart)</option>
+      <option value="joker">Joker (Goofy)</option>
+    </select>
+  </div>
+
+  <div class="api-select">
+    <select id="apiKeySelect">
+      <option value="YOUR_GEMINI_API_KEY">Gemini API Key</option>
+    </select>
+  </div>
+
+  <img id="clippy"
+       src="https://www.rickstreeper.com/clippy/Clippy.png">
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="right">
+  <div class="chat-header">
+    <img src="https://www.rickstreeper.com/clippy/Clippy.png" width="46">
+    <div>
+      <strong>Clippy</strong>
+      <div id="status">Ready</div>
+    </div>
+  </div>
+
+  <div id="chat" class="chat-area"></div>
+
+  <div class="input-row">
+    <input id="input" placeholder="Ask Clippy..." />
+    <button id="send">Send</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const chat=document.getElementById("chat");
+const input=document.getElementById("input");
+const sendBtn=document.getElementById("send");
+const statusEl=document.getElementById("status");
+const clippy=document.getElementById("clippy");
+
+const personalityImages={
+  clippy:"https://www.rickstreeper.com/clippy/Clippy.png",
+  professor:"https://www.rickstreeper.com/clippy/Clippy-Professor.png",
+  joker:"https://www.rickstreeper.com/clippy/Clippy-Joker.png"
+};
+
+document.getElementById("personality").onchange=e=>{
+  clippy.src=personalityImages[e.target.value];
+};
+
+const history=[];
+
+function addMsg(role,text){
+  const d=document.createElement("div");
+  d.className=`msg ${role}`;
+  d.textContent=(role==="user"?"You: ":"Clippy: ")+text;
+  chat.appendChild(d);
+  chat.scrollTop=chat.scrollHeight;
+}
+
+function setStatus(t){statusEl.textContent=t;}
+
+async function send(){
+  const text=input.value.trim();
+  if(!text)return;
+  input.value="";
+  addMsg("user",text);
+  history.push(text);
+  setStatus("Thinking…");
+  animate("wiggle");
+
+  try{
+    const reply=await gemini(text);
+    addMsg("clippy",reply);
+    animate(reply.includes("!")?"jump":"wiggle");
+  }catch{
+    addMsg("clippy","⚠️ Gemini API error");
+  }
+  setStatus("Ready");
+}
+
+sendBtn.onclick=send;
+input.onkeydown=e=>e.key==="Enter"&&send();
+
+async function gemini(prompt){
+  const key=document.getElementById("apiKeySelect").value;
+  const personality=document.getElementById("personality").value;
+
+  const system=`You are Microsoft Clippy.
+Personality: ${personality}
+Be helpful, fun, concise.`;
+
+  const res=await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+    {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        contents:[{
+          role:"user",
+          parts:[{text:system+"\n\n"+history.join("\n")+"\nUser: "+prompt}]
+        }],
+        generationConfig:{temperature:.8,maxOutputTokens:300}
+      })
+    }
+  );
+
+  const data=await res.json();
+  return data.candidates[0].content.parts[0].text;
+}
+
+function animate(cls){
+  clippy.classList.add(cls);
+  setTimeout(()=>clippy.classList.remove(cls),400);
+}
+
+addMsg("clippy","Hi! I’m Clippy — powered by Gemini 🤖");
+
+</script>
+</body>
+</html>
